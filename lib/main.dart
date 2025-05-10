@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'views/home_screen.dart';
+import 'controllers/theme_controller.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,15 +12,32 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
+    final ThemeController themeController = Get.put(ThemeController());
+    return Obx(() => GetMaterialApp(
       title: 'VPN Simulator',
       theme: ThemeData(
-
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.light),
+        scaffoldBackgroundColor: const Color(0xFFF2F5F9),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF1A5CFF),
+          elevation: 0,
+        ),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.dark),
+        scaffoldBackgroundColor: const Color(0xFF181A20),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF23242B),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: themeController.themeMode.value,
       home: HomeScreen(),
-    );
+    ));
   }
 }
 

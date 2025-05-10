@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../controllers/theme_controller.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -8,15 +10,15 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool isDarkMode = false;
+  final ThemeController themeController = Get.find();
   String selectedLanguage = 'English';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F5F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         title: const Text('Settings', style: TextStyle(color: Color(0xFF1A5CFF), fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -48,13 +50,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Dark Mode', style: TextStyle(fontSize: 16, color: Color(0xFF333333))),
-              Switch(
-                value: isDarkMode,
-                activeColor: const Color(0xFF1A5CFF),
-                onChanged: (val) {
-                  setState(() => isDarkMode = val);
-                },
-              ),
+              Obx(() => Switch(
+                    value: themeController.isDarkMode,
+                    activeColor: const Color(0xFF1A5CFF),
+                    onChanged: (val) {
+                      themeController.toggleTheme(val);
+                    },
+                  )),
             ],
           ),
           const Divider(height: 32),
