@@ -11,6 +11,7 @@ class VPNController extends GetxController {
   final RxList<Country> countries = <Country>[].obs;
   final RxString searchQuery = ''.obs;
   final Rx<Duration> liveConnectionTime = Duration.zero.obs;
+  final RxBool isConnecting = false.obs;
 
   Timer? _timer;
 
@@ -40,8 +41,10 @@ class VPNController extends GetxController {
     selectedCountry.value = country;
   }
 
-  void connect() {
+  Future<void> connect() async {
     if (selectedCountry.value != null) {
+      isConnecting.value = true;
+      await Future.delayed(const Duration(seconds: 2));
       isConnected.value = true;
       connectionStats.value = ConnectionStats(
         downloadSpeed: MockDataService.mockConnectionStats.downloadSpeed,
@@ -54,6 +57,7 @@ class VPNController extends GetxController {
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         liveConnectionTime.value += const Duration(seconds: 1);
       });
+      isConnecting.value = false;
     }
   }
 
@@ -62,6 +66,7 @@ class VPNController extends GetxController {
     connectionStats.value = null;
     _timer?.cancel();
     liveConnectionTime.value = Duration.zero;
+    isConnecting.value = false;
   }
 
   String getFormattedConnectionTime() {

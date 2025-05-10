@@ -28,19 +28,40 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: scaffoldBg,
       bottomNavigationBar: _buildBottomNavBar(context, iconColor),
       body: SafeArea(
-        child: _selectedTab == 2
-            ? const SettingsScreen()
-            : Column(
-                children: [
-                  _buildHeader(isDark),
-                  _buildSearchBar(cardColor, textColor, iconColor),
-                  Obx(() => controller.isConnected.value
-                      ? _buildConnectionCard(cardColor, textColor, subTextColor, iconColor)
-                      : const SizedBox(height: 24)),
-                  _buildFreeLocationsTitle(textColor, subTextColor),
-                  Expanded(child: Obx(() => _buildCountryList(cardColor, textColor, subTextColor, borderColor, iconColor))),
-                ],
-              ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
+          child: _selectedTab == 2
+              ? const SettingsScreen(key: ValueKey('settings'))
+              : Column(
+                  key: ValueKey('main'),
+                  children: [
+                    _buildHeader(isDark),
+                    _buildSearchBar(cardColor, textColor, iconColor),
+                    Obx(() {
+                      if (controller.isConnecting.value) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 32),
+                          child: Column(
+                            children: [
+                              CircularProgressIndicator(color: iconColor),
+                              const SizedBox(height: 16),
+                              Text('Connecting...', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        );
+                      } else if (controller.isConnected.value) {
+                        return _buildConnectionCard(cardColor, textColor, subTextColor, iconColor);
+                      } else {
+                        return const SizedBox(height: 24);
+                      }
+                    }),
+                    _buildFreeLocationsTitle(textColor, subTextColor),
+                    Expanded(child: Obx(() => _buildCountryList(cardColor, textColor, subTextColor, borderColor, iconColor))),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -92,7 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Icon(icon, color: Colors.white, size: 24),
     );
   }
-
   Widget _buildSearchBar(Color cardColor, Color textColor, Color iconColor) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
@@ -131,6 +151,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildConnectionCard(Color cardColor, Color textColor, Color? subTextColor, Color iconColor) {
+    final download = controller.connectionStats.value?.downloadSpeed ?? 0;
+    final upload = controller.connectionStats.value?.uploadSpeed ?? 0;
+    final maxSpeed = 1000.0;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -209,14 +232,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStatCard('Download',
-                  '${controller.connectionStats.value?.downloadSpeed ?? 0} MB', Icons.download_rounded, const Color(0xFF3DD598), textColor, subTextColor),
-              _buildStatCard('Upload',
-                  '${controller.connectionStats.value?.uploadSpeed ?? 0} MB', Icons.upload_rounded, const Color(0xFFFF6B6B), textColor, subTextColor),
-            ],
+          _AnimatedSpeedBar(
+            label: 'Download',
+            value: download,
+            max: maxSpeed,
+            color: const Color(0xFF3DD598),
+            textColor: textColor,
+            subTextColor: subTextColor,
+            icon: Icons.download_rounded,
+          ),
+          const SizedBox(height: 12),
+          _AnimatedSpeedBar(
+            label: 'Upload',
+            value: upload,
+            max: maxSpeed,
+            color: const Color(0xFFFF6B6B),
+            textColor: textColor,
+            subTextColor: subTextColor,
+            icon: Icons.upload_rounded,
           ),
         ],
       ),
@@ -317,7 +350,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () async {
         if (isActive) {
-          controller.disconnect();
+          final result = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Disconnect VPN'),
+              content: const Text('Are you sure you want to disconnect the VPN?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('No'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Yes'),
+                ),
+              ],
+            ),
+          );
+          if (result == true) {
+            await _showDisconnectingAnimation();
+            controller.disconnect();
+          }
         } else {
           final result = await showDialog<bool>(
             context: context,
@@ -365,6 +418,30 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _showDisconnectingAnimation() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 16),
+              const Text('Disconnecting...', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ),
+    );
+    await Future.delayed(const Duration(seconds: 2));
+    Navigator.of(context, rootNavigator: true).pop();
   }
 
   Widget _buildFlag(String assetPath) {
@@ -419,9 +496,30 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.wifi_off_rounded,
             label: 'Disconnect',
             active: _selectedTab == 1,
-            onTap: () {
-              setState(() => _selectedTab = 1);
-              controller.disconnect();
+            onTap: () async {
+              final result = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Disconnect VPN'),
+                  content: const Text('Are you sure you want to disconnect the VPN?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('No'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Yes'),
+                    ),
+                  ],
+                ),
+              );
+              if (result == true) {
+                await _showDisconnectingAnimation();
+                controller.disconnect();
+              } else {
+                setState(() => _selectedTab = 0);
+              }
             },
             iconColor: iconColor,
           ),
@@ -465,6 +563,70 @@ class _NavBarItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedSpeedBar extends StatelessWidget {
+  final String label;
+  final double value;
+  final double max;
+  final Color color;
+  final Color textColor;
+  final Color? subTextColor;
+  final IconData icon;
+  const _AnimatedSpeedBar({
+    required this.label,
+    required this.value,
+    required this.max,
+    required this.color,
+    required this.textColor,
+    required this.subTextColor,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(color: subTextColor, fontSize: 13)),
+            const Spacer(),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: value),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, animatedValue, child) {
+                return Text(
+                  '${animatedValue.toStringAsFixed(0)} MB',
+                  style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: (value / max).clamp(0.0, 1.0)),
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeOutCubic,
+          builder: (context, animatedValue, child) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: animatedValue,
+                minHeight: 10,
+                backgroundColor: color.withOpacity(0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 } 

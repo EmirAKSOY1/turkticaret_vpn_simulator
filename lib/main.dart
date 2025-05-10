@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
     final ThemeController themeController = Get.put(ThemeController());
     return Obx(() => GetMaterialApp(
       title: 'VPN Simulator',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.light),
         scaffoldBackgroundColor: const Color(0xFFF2F5F9),
