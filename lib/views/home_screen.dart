@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final VPNController controller = Get.put(VPNController());
   int _selectedTab = 0;
+  Map<int, bool> expandedCountries = {};
 
   @override
   Widget build(BuildContext context) {
@@ -310,12 +311,18 @@ class _HomeScreenState extends State<HomeScreen> {
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final country = controller.countries[index];
-        return _buildCountryCard(country, cardColor, textColor, subTextColor, borderColor, iconColor);
+        final isExpanded = expandedCountries[index] ?? false;
+        return Column(
+          children: [
+            _buildCountryCard(country, cardColor, textColor, subTextColor, borderColor, iconColor, index, isExpanded),
+            if (isExpanded) _buildLocationList(country, cardColor, textColor, subTextColor, iconColor),
+          ],
+        );
       },
     );
   }
 
-  Widget _buildCountryCard(Country country, Color cardColor, Color textColor, Color? subTextColor, Color borderColor, Color iconColor) {
+  Widget _buildCountryCard(Country country, Color cardColor, Color textColor, Color? subTextColor, Color borderColor, Color iconColor, int index, bool isExpanded) {
     final isActive = controller.isConnected.value && controller.selectedCountry.value == country;
     return Container(
       decoration: BoxDecoration(
@@ -333,15 +340,85 @@ class _HomeScreenState extends State<HomeScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         leading: _buildFlag(country.flag),
         title: Text(country.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-        subtitle: Text('${country.locationCount} Locations', style: TextStyle(color: subTextColor, fontSize: 13)),
+        subtitle: Text('${country.locations.length} Locations', style: TextStyle(color: subTextColor, fontSize: 13)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _powerButton(isActive, country, borderColor, iconColor, cardColor),
             const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded, color: subTextColor, size: 18),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  expandedCountries[index] = !(expandedCountries[index] ?? false);
+                });
+              },
+              child: AnimatedRotation(
+                turns: isExpanded ? 0.5 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: Icon(Icons.arrow_forward_ios_rounded, color: subTextColor, size: 18),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLocationList(Country country, Color cardColor, Color textColor, Color? subTextColor, Color iconColor) {
+    return Container(
+      margin: const EdgeInsets.only(left: 24, right: 8, bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: cardColor.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: country.locations.map((location) {
+          return ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+            leading: Icon(
+              location.isFree ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+              color: location.isFree ? Colors.green : Colors.red,
+              size: 20,
+            ),
+            title: Text(location.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w500)),
+            trailing: location.isFree
+                ? _ModernConnectButton(
+                    onTap: () async {
+                      final result = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('VPN Configuration'),
+                          content: const Text('VPN configuration will be set up. Do you want to continue?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('No'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Yes'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (result == true) {
+                        controller.selectCountry(country);
+                        await controller.connect();
+                      }
+                    },
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('Pro', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -627,6 +704,48 @@ class _AnimatedSpeedBar extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _ModernConnectButton extends StatefulWidget {
+  final Future<void> Function() onTap;
+  const _ModernConnectButton({required this.onTap, Key? key}) : super(key: key);
+
+  @override
+  State<_ModernConnectButton> createState() => _ModernConnectButtonState();
+}
+
+class _ModernConnectButtonState extends State<_ModernConnectButton> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        minimumSize: const Size(40, 32),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 2,
+        shadowColor: Colors.green.withOpacity(0.18),
+      ),
+      onPressed: () async {
+        if (_loading) return;
+        setState(() => _loading = true);
+        await widget.onTap();
+        setState(() => _loading = false);
+      },
+      child: _loading
+          ? const SizedBox(width: 24, height: 18, child: Center(child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))))
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.power_settings_new_rounded, color: Colors.white, size: 16),
+                SizedBox(width: 6),
+                Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ],
+            ),
     );
   }
 } 
