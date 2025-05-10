@@ -155,6 +155,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final download = controller.connectionStats.value?.downloadSpeed ?? 0;
     final upload = controller.connectionStats.value?.uploadSpeed ?? 0;
     final maxSpeed = 1000.0;
+    final country = controller.connectionStats.value?.connectedCountry;
+    final city = controller.connectedLocation.value?.name ?? '';
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -193,27 +195,27 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 18),
           Row(
             children: [
-              _buildFlag(controller.connectionStats.value?.connectedCountry.flag ?? ''),
+              _buildFlag(country?.flag ?? ''),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Obx(() => Text(
-                          controller.connectionStats.value?.connectedCountry.name ?? '',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )),
-                    Obx(() => Text(
-                          controller.connectionStats.value?.connectedCountry.city ?? '',
-                          style: TextStyle(
-                            color: subTextColor,
-                            fontSize: 14,
-                          ),
-                        )),
+                    Text(
+                      country?.name ?? '',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      city,
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -384,31 +386,51 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             title: Text(location.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w500)),
             trailing: location.isFree
-                ? _ModernConnectButton(
-                    onTap: () async {
-                      final result = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('VPN Configuration'),
-                          content: const Text('VPN configuration will be set up. Do you want to continue?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('No'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('Yes'),
-                            ),
+                ? (controller.connectedLocation.value?.name == location.name && controller.isConnected.value
+                    ? ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey,
+                          minimumSize: const Size(40, 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 2,
+                          shadowColor: Colors.grey.withOpacity(0.18),
+                        ),
+                        onPressed: null,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.check_circle, color: Colors.white, size: 16),
+                            SizedBox(width: 6),
+                            Text('Connected', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                           ],
                         ),
-                      );
-                      if (result == true) {
-                        controller.selectCountry(country);
-                        await controller.connect();
-                      }
-                    },
-                  )
+                      )
+                    : _ModernConnectButton(
+                        onTap: () async {
+                          final result = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('VPN Configuration'),
+                              content: const Text('VPN configuration will be set up. Do you want to continue?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text('No'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  child: const Text('Yes'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (result == true) {
+                            controller.selectCountry(country);
+                            await controller.connect(location: location);
+                          }
+                        },
+                      ))
                 : Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(

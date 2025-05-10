@@ -3,9 +3,11 @@ import '../models/country.dart';
 import '../models/connection_stats.dart';
 import '../services/mock_data_service.dart';
 import 'dart:async';
+import '../models/location.dart';
 
 class VPNController extends GetxController {
   final Rx<Country?> selectedCountry = Rx<Country?>(null);
+  final Rx<Location?> connectedLocation = Rx<Location?>(null);
   final RxBool isConnected = false.obs;
   final Rx<ConnectionStats?> connectionStats = Rx<ConnectionStats?>(null);
   final RxList<Country> countries = <Country>[].obs;
@@ -41,11 +43,16 @@ class VPNController extends GetxController {
     selectedCountry.value = country;
   }
 
-  Future<void> connect() async {
+  Future<void> connect({Location? location}) async {
     if (selectedCountry.value != null) {
       isConnecting.value = true;
       await Future.delayed(const Duration(seconds: 2));
       isConnected.value = true;
+      Location? loc = location;
+      if (loc == null) {
+        loc = selectedCountry.value!.locations.firstWhereOrNull((l) => l.isFree);
+      }
+      connectedLocation.value = loc;
       connectionStats.value = ConnectionStats(
         downloadSpeed: MockDataService.mockConnectionStats.downloadSpeed,
         uploadSpeed: MockDataService.mockConnectionStats.uploadSpeed,
@@ -67,6 +74,7 @@ class VPNController extends GetxController {
     _timer?.cancel();
     liveConnectionTime.value = Duration.zero;
     isConnecting.value = false;
+    connectedLocation.value = null;
   }
 
   String getFormattedConnectionTime() {
