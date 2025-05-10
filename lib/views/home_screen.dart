@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/vpn_controller.dart';
 import '../models/country.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   HomeScreen({super.key});
@@ -20,17 +21,19 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF2F5F9),
       bottomNavigationBar: _buildBottomNavBar(),
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildSearchBar(),
-            Obx(() => controller.isConnected.value
-                ? _buildConnectionCard()
-                : const SizedBox(height: 24)),
-            _buildFreeLocationsTitle(),
-            Expanded(child: Obx(() => _buildCountryList())),
-          ],
-        ),
+        child: _selectedTab == 2
+            ? const SettingsScreen()
+            : Column(
+                children: [
+                  _buildHeader(),
+                  _buildSearchBar(),
+                  Obx(() => controller.isConnected.value
+                      ? _buildConnectionCard()
+                      : const SizedBox(height: 24)),
+                  _buildFreeLocationsTitle(),
+                  Expanded(child: Obx(() => _buildCountryList())),
+                ],
+              ),
       ),
     );
   }
