@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "737355187298",
+    "project_id": "vpn2-a5faa",
+    "storage_bucket": "vpn2-a5faa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:737355187298:android:1b1c7dcc1915f6f4677d3b",
+        "android_client_info": {
+          "package_name": "com.example.turkticaret_vpn_simulator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBshITtvNMRPeNTkoIoeLuS1RLNTXQJXAI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

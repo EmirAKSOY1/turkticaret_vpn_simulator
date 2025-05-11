@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'views/home_screen.dart';
+import 'views/login_view.dart';
+import 'views/register_view.dart';
+import 'views/forgot_password_view.dart';
 import 'controllers/theme_controller.dart';
+import 'controllers/auth_controller.dart';
+import 'services/auth_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+
+  Get.put(AuthService());
+  Get.put(AuthController());
+  
   runApp(const MyApp());
 }
 
@@ -13,6 +25,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeController themeController = Get.put(ThemeController());
+
     return Obx(() => GetMaterialApp(
       title: 'VPN Simulator',
       debugShowCheckedModeBanner: false,
@@ -37,7 +50,13 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: themeController.themeMode.value,
-      home: HomeScreen(),
+      initialRoute: '/login',
+      getPages: [
+        GetPage(name: '/login', page: () => const LoginView()),
+        GetPage(name: '/register', page: () => const RegisterView()),
+        GetPage(name: '/forgot-password', page: () => const ForgotPasswordView()),
+        GetPage(name: '/home', page: () => HomeScreen()),
+      ],
     ));
   }
 }

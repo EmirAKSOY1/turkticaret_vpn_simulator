@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/theme_controller.dart';
+import '../controllers/auth_controller.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,6 +12,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final ThemeController themeController = Get.find();
+  final AuthController authController = Get.find();
   String selectedLanguage = 'English';
 
   @override
@@ -37,10 +39,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('User Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF333333))),
-                  SizedBox(height: 4),
-                  Text('user@email.com', style: TextStyle(color: Color(0xFF666666))),
+                children: [
+                  Text(
+                    authController.userEmail ?? 'User',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF333333))
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    authController.userEmail ?? 'user@email.com',
+                    style: const TextStyle(color: Color(0xFF666666))
+                  ),
                 ],
               ),
             ],
@@ -59,30 +67,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   )),
             ],
           ),
+
           const Divider(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Language', style: TextStyle(fontSize: 16, color: Color(0xFF333333))),
-              DropdownButton<String>(
-                value: selectedLanguage,
-                items: const [
-                  DropdownMenuItem(value: 'English', child: Text('English')),
-                  DropdownMenuItem(value: 'Turkish', child: Text('Turkish')),
-                ],
-                onChanged: (val) {
-                  if (val != null) setState(() => selectedLanguage = val);
-                },
-              ),
-            ],
-          ),
-          const Divider(height: 32),
-          
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.info_outline, color: Color(0xFF1A5CFF)),
             title: const Text('About', style: TextStyle(color: Color(0xFF333333))),
             subtitle: const Text('VPN Simulator v1.0.0'),
+          ),
+          const Divider(height: 32),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              await authController.signOut();
+              Get.offAllNamed('/login');
+            },
           ),
         ],
       ),
